@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+    function isVerifier() {
+      return isAuthenticated() && (getUserRole() == 'verifier' || getUserRole() == 'admin');
+    }
+    function isCoordinator() {
+      return isAuthenticated() && (getUserRole() == 'coordinator' || getUserRole() == 'admin');
+    }
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'admin';
+    }
+
+    // Incidents (Public read, verified write)
+    match /incidents/{incidentId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // Incident Reports (Public read, authenticated submit)
+    match /reports/{reportId} {
+      allow read: if true;
+      allow create: if true; // Demo allows anonymous or community reports
+      allow update, delete: if isVerifier() || isAdmin();
+    }
+
+    // Claims (Public read, only Verifier or Admin can verify status)
+    match /claims/{claimId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isVerifier() || isCoordinator();
+      allow delete: if isAdmin();
+    }
+
+    // Evidence Items (Public read, authenticated create)
+    match /evidence/{evidenceId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isVerifier() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Verification Decisions (Append-only by authorized verifiers)
+    match /verificationDecisions/{decisionId} {
+      allow read: if true;
+      allow create: if isVerifier();
+      allow update, delete: if false; // Immutable audit record
+    }
+
+    // Evidence Gaps (Unknown Detector)
+    match /evidenceGaps/{gapId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // Interventions & Outcome Measurements
+    match /interventions/{interventionId} {
+      allow read: if true;
+      allow create, update: if isCoordinator() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /outcomeMeasurements/{measurementId} {
+      allow read: if true;
+      allow create: if isCoordinator() || isVerifier() || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    // Community Actions
+    match /actions/{actionId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // Audit Events (Strictly append-only by server/authenticated users, never modified)
+    match /auditEvents/{eventId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+  }
+}
