@@ -8,7 +8,8 @@ import {
   Claim,
   EvidenceItem,
   EvidenceGap,
-  Intervention
+  Intervention,
+  SentimentAnalysis
 } from './types.js';
 
 export const SentimentAnalysisSchema = z.object({
