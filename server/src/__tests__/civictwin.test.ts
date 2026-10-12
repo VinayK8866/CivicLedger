@@ -259,4 +259,35 @@ describe('CivicTwin + ProofMesh Test Suite', () => {
       expect(sentiment.keyDistressFactors.length).toBeGreaterThan(0);
     });
   });
+
+  describe('9. Municipal Accountability Chain & Subordinate Inaction Escalation', () => {
+    it('provides clear accountability custodians with SLA deadlines for prioritized incidents', async () => {
+      const res = await request(app).get('/api/incidents/inc-live-cable');
+      expect(res.status).toBe(200);
+      const inc = res.body.incident;
+      expect(inc.accountability).toBeDefined();
+      expect(inc.accountability.assignedOfficer.name).toBe('Er. Rajesh Verma');
+      expect(inc.accountability.supervisoryAuthority.name).toContain('Dr. Nandini Sundaram');
+      expect(inc.accountability.slaStatus).toBe('sla_breached');
+    });
+
+    it('allows escalating subordinate non-response to the higher authority with an audit dossier', async () => {
+      const res = await request(app)
+        .post('/api/incidents/inc-live-cable/escalate')
+        .send({
+          reason: 'Subordinate field officer Er. Rajesh Verma has not deployed the emergency isolation crew for 2 days despite 440V sparking in front of elementary school.'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.escalation).toBeDefined();
+      expect(res.body.escalation.fromOfficial.name).toBe('Er. Rajesh Verma');
+      expect(res.body.escalation.toOfficial.title).toContain('Chief Municipal Commissioner');
+      expect(res.body.incident.accountability.slaStatus).toBe('escalated_to_superior');
+
+      // Verify audit trail entry was created
+      const auditRes = await request(app).get('/api/admin/health');
+      expect(auditRes.status).toBe(200);
+    });
+  });
 });

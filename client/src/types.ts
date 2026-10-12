@@ -69,6 +69,45 @@ export interface IncidentReport {
   matchingRationale?: string;
 }
 
+export interface AccountabilityCustodian {
+  id: string;
+  name: string;
+  title: string;
+  department: string;
+  level: 'subordinate_field_officer' | 'zonal_superintendent' | 'chief_commissioner';
+  contactEmail: string;
+  contactPhone: string;
+}
+
+export interface EscalationRecord {
+  id: string;
+  incidentId: string;
+  escalatedAt: string;
+  escalatedBy: string; // Citizen, Verifier, or Automated Watchdog
+  escalatedByName: string;
+  fromOfficial: AccountabilityCustodian; // Subordinate who did not respond
+  toOfficial: AccountabilityCustodian;   // Higher authority
+  reason: string;
+  daysUnresponsive: number;
+  slaBreachedHours: number;
+  evidencePacketSummary: string;
+  status: 'pending_commissioner_review' | 'disciplinary_inquiry' | 'urgent_override_dispatched' | 'resolved';
+  supervisoryActionNotes?: string;
+}
+
+export interface IncidentAccountability {
+  department: string;
+  assignedOfficer: AccountabilityCustodian;      // Subordinate responsible
+  supervisoryAuthority: AccountabilityCustodian; // Higher supervisory authority
+  assignedAt: string;
+  slaHours: number;                              // Maximum allotted response time in hours
+  slaDeadline: string;
+  slaStatus: 'within_sla' | 'sla_breached' | 'escalated_to_superior' | 'superior_action_mandated' | 'resolved';
+  lastOfficerUpdate?: string;
+  inactionDays: number;
+  escalationHistory: EscalationRecord[];
+}
+
 export interface CanonicalIncident {
   id: string;
   title: string;
@@ -87,6 +126,7 @@ export interface CanonicalIncident {
   urgencyRationale: string;
   tags: string[];
   reportIds: string[];
+  accountability?: IncidentAccountability;
   createdAt: string;
   updatedAt: string;
 }

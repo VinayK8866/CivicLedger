@@ -79,6 +79,27 @@ export async function fetchIncidentTimeline(id: string): Promise<{ timeline: Obs
   return res.json();
 }
 
+export async function escalateIncidentToHigherAuthority(
+  incidentId: string,
+  data: { reason: string; evidenceNotes?: string }
+): Promise<{
+  success: boolean;
+  message: string;
+  escalation: any;
+  incident: CanonicalIncident;
+}> {
+  const res = await fetch(`${BASE_URL}/incidents/${incidentId}/escalate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to escalate to higher authority');
+  }
+  return res.json();
+}
+
 export async function submitIncidentReport(data: {
   title: string;
   description: string;

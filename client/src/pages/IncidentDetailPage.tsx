@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { fetchIncidentById, convertGapToAction } from '../api';
+import { fetchIncidentById, convertGapToAction, escalateIncidentToHigherAuthority } from '../api';
 import {
   CanonicalIncident,
   IncidentReport,
@@ -29,7 +29,14 @@ import {
   Layers,
   ChevronRight,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Scale,
+  Building2,
+  UserX,
+  ShieldAlert,
+  Send,
+  X,
+  FileWarning
 } from 'lucide-react';
 
 export const IncidentDetailPage: React.FC = () => {
@@ -44,8 +51,14 @@ export const IncidentDetailPage: React.FC = () => {
     interventions: Intervention[];
   } | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'timeline' | 'claims' | 'gaps' | 'prevention'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'claims' | 'gaps' | 'prevention' | 'accountability'>('timeline');
   const [loading, setLoading] = useState(true);
+
+  // Subordinate non-response escalation modal state
+  const [isEscalateModalOpen, setIsEscalateModalOpen] = useState(false);
+  const [escalateReason, setEscalateReason] = useState('');
+  const [escalateNotes, setEscalateNotes] = useState('');
+  const [submittingEscalation, setSubmittingEscalation] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -73,6 +86,29 @@ export const IncidentDetailPage: React.FC = () => {
       }
     } catch (err) {
       alert('Failed to convert gap');
+    }
+  };
+
+  const handleEscalateSubordinate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !escalateReason.trim()) return;
+    try {
+      setSubmittingEscalation(true);
+      await escalateIncidentToHigherAuthority(id, {
+        reason: escalateReason,
+        evidenceNotes: escalateNotes
+      });
+      alert('Official Negligence & Non-Response Escalation Notice dispatched to Chief Municipal Commissioner!');
+      setIsEscalateModalOpen(false);
+      setEscalateReason('');
+      setEscalateNotes('');
+      const refreshed = await fetchIncidentById(id);
+      setData(refreshed);
+      setActiveTab('accountability');
+    } catch (err: any) {
+      alert(err.message || 'Failed to submit escalation to higher authority');
+    } finally {
+      setSubmittingEscalation(false);
     }
   };
 
@@ -136,7 +172,7 @@ export const IncidentDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               to={`/evidence?incidentId=${incident.id}`}
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 shadow-2xs"
@@ -151,6 +187,16 @@ export const IncidentDetailPage: React.FC = () => {
               <FlaskConical className="w-3.5 h-3.5" />
               <span>Prevention Lab</span>
             </Link>
+            <button
+              onClick={() => {
+                setActiveTab('accountability');
+                setIsEscalateModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-rose-500 shadow-2xs transition-colors"
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>Escalate Non-Response</span>
+            </button>
           </div>
         </div>
 
@@ -159,6 +205,67 @@ export const IncidentDetailPage: React.FC = () => {
           <span className="font-bold text-slate-900 block mb-1">CivicTwin Current Assessment:</span>
           {incident.currentAssessment}
         </div>
+
+        {/* Municipal Accountability Strip */}
+        {incident.accountability && (
+          <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="p-1 rounded-md bg-slate-100 text-slate-700">
+                  <Building2 className="w-3.5 h-3.5" />
+                </span>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-medium block">Department</span>
+                  <span className="font-semibold text-slate-800">{incident.accountability.department}</span>
+                </div>
+              </div>
+
+              <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+
+              <div>
+                <span className="text-[10px] text-slate-400 font-medium block">Assigned Custodian (Subordinate)</span>
+                <span className="font-semibold text-slate-800">{incident.accountability.assignedOfficer.name}</span>
+              </div>
+
+              <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+
+              <div>
+                <span className="text-[10px] text-slate-400 font-medium block">Supervisory Authority (Higher Officer)</span>
+                <span className="font-semibold text-cyan-800">{incident.accountability.supervisoryAuthority.name}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {incident.accountability.slaStatus === 'sla_breached' ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-full animate-pulse">
+                  <AlertTriangle className="w-3 h-3 text-rose-600" />
+                  <span>SLA Breached ({incident.accountability.inactionDays}d Inactive)</span>
+                </span>
+              ) : incident.accountability.slaStatus === 'escalated_to_superior' ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full">
+                  <ShieldAlert className="w-3 h-3 text-purple-600" />
+                  <span>Escalated to Commissioner</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                  <Clock className="w-3 h-3 text-emerald-600" />
+                  <span>Active SLA ({incident.accountability.slaHours}h window)</span>
+                </span>
+              )}
+
+              <button
+                onClick={() => {
+                  setActiveTab('accountability');
+                  setIsEscalateModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <UserX className="w-3 h-3" />
+                <span>Escalate Inaction</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Civic Urgency & Resident Distress Sentiment Meter */}
         <div className="rounded-xl border border-rose-200/90 bg-gradient-to-br from-rose-50/40 via-white to-amber-50/30 p-4.5 space-y-3.5 shadow-2xs">
@@ -305,6 +412,23 @@ export const IncidentDetailPage: React.FC = () => {
         >
           <FlaskConical className="w-4 h-4" />
           <span>Interventions & Outcome Tracking ({interventions.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('accountability')}
+          className={`pb-3 border-b-2 flex items-center gap-1.5 transition-colors ${
+            activeTab === 'accountability'
+              ? 'border-cyan-600 text-cyan-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Scale className="w-4 h-4" />
+          <span>Municipal Accountability Chain ({incident.accountability?.escalationHistory.length || 0})</span>
+          {incident.accountability?.slaStatus === 'sla_breached' && (
+            <span className="bg-rose-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold animate-pulse">
+              SLA BREACH
+            </span>
+          )}
         </button>
       </div>
 
@@ -640,6 +764,391 @@ export const IncidentDetailPage: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: Municipal Accountability Chain & Subordinate Non-Response Escalation */}
+      {activeTab === 'accountability' && (
+        <div className="space-y-6">
+          {/* Overview Header */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-cyan-100 text-cyan-800">
+                  <Scale className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Municipal Accountability Chain & Subordinate Escalation Protocol
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Transparent administrative custody mapping from frontline field engineers up to the Chief Municipal Commissioner.
+                  </p>
+                </div>
+              </div>
+
+              {incident.accountability && (
+                <div className="flex items-center gap-2">
+                  {incident.accountability.slaStatus === 'sla_breached' ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-300 px-3 py-1 rounded-full animate-pulse">
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                      <span>SLA BREACHED ({incident.accountability.inactionDays} Days Inactive)</span>
+                    </span>
+                  ) : incident.accountability.slaStatus === 'escalated_to_superior' ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 border border-purple-300 px-3 py-1 rounded-full">
+                      <ShieldAlert className="w-3.5 h-3.5 text-purple-600" />
+                      <span>ESCALATED TO CHIEF COMMISSIONER</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 px-3 py-1 rounded-full">
+                      <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>WITHIN SLA WINDOW ({incident.accountability.slaHours}h)</span>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Explanatory Banner */}
+            <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5 text-xs text-slate-700 leading-relaxed space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-slate-900">
+                <Info className="w-4 h-4 text-cyan-600" />
+                <span>The Accountability Guarantee:</span>
+              </div>
+              <p>
+                Every prioritized civic issue is legally assigned to a designated subordinate field officer with a strict turnaround SLA. If the subordinate fails to respond, conducts superficial work, or leaves the problem unsolved, the community has an enforceable mechanism to file a non-response grievance directly with the higher supervisory authority with full ProofMesh evidence attached.
+              </p>
+            </div>
+
+            {/* Chain of Custody Hierarchy */}
+            {incident.accountability ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                {/* 1. Subordinate Assigned Officer */}
+                <div className="rounded-xl border border-slate-200 bg-white p-4.5 space-y-3.5 shadow-2xs">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                      Tier 1: Designated Field Custodian
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                      Subordinate
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="text-base font-bold text-slate-900">
+                      {incident.accountability.assignedOfficer.name}
+                    </h4>
+                    <p className="text-xs font-semibold text-slate-600">
+                      {incident.accountability.assignedOfficer.title}
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      {incident.accountability.department}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-slate-50 p-3 space-y-1.5 text-xs text-slate-600">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Official Desk Email:</span>
+                      <span className="font-medium text-slate-800">{incident.accountability.assignedOfficer.contactEmail}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Direct Hotline:</span>
+                      <span className="font-medium text-slate-800">{incident.accountability.assignedOfficer.contactPhone}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Allotted SLA Window:</span>
+                      <span className="font-bold text-slate-900">{incident.accountability.slaHours} Hours</span>
+                    </div>
+                  </div>
+
+                  {/* Field Performance Alert */}
+                  {incident.accountability.slaStatus === 'sla_breached' ? (
+                    <div className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-xs text-rose-900 space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-rose-800">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        <span>Subordinate Inaction Warning</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed">
+                        Officer has exceeded the maximum allotted resolution deadline ({incident.accountability.slaHours}h) by {incident.accountability.inactionDays} days without logging verified field progress.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-900 space-y-1">
+                      <span className="font-bold block">Status: Active Resolution Window</span>
+                      <p className="text-[11px] text-emerald-800">
+                        Officer is within the assigned SLA window. Last note: {incident.accountability.lastOfficerUpdate || 'Work order active.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Higher Supervisory Authority */}
+                <div className="rounded-xl border border-cyan-200 bg-cyan-50/20 p-4.5 space-y-3.5 shadow-2xs">
+                  <div className="flex items-center justify-between border-b border-cyan-100 pb-2.5">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-cyan-800">
+                      Tier 2: Higher Supervisory Authority
+                    </span>
+                    <span className="text-[10px] font-bold text-cyan-800 bg-cyan-100 px-2 py-0.5 rounded">
+                      Executive Oversight
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="text-base font-bold text-slate-900">
+                      {incident.accountability.supervisoryAuthority.name}
+                    </h4>
+                    <p className="text-xs font-semibold text-cyan-900">
+                      {incident.accountability.supervisoryAuthority.title}
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      Municipal Corporation Executive Directorate & Public Safety Ombudsman
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-white p-3 space-y-1.5 text-xs text-slate-600 border border-cyan-100">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Vigilance Desk Email:</span>
+                      <span className="font-medium text-slate-800">{incident.accountability.supervisoryAuthority.contactEmail}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Executive Secretariat:</span>
+                      <span className="font-medium text-slate-800">{incident.accountability.supervisoryAuthority.contactPhone}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Statutory Oversight Jurisdiction:</span>
+                      <span className="font-bold text-cyan-900">Ward 4 Executive & Contractor Oversight</span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg bg-white/90 border border-slate-200 p-3 text-[11px] text-slate-600 space-y-1">
+                    <span className="font-bold text-slate-800 block">Supervisory Enforcement Powers:</span>
+                    <ul className="list-disc list-inside space-y-0.5 text-slate-500">
+                      <li>Issues binding 24h compliance mandates to delinquent field engineers</li>
+                      <li>Authorizes emergency mechanized override contractor deployment</li>
+                      <li>Initiates administrative disciplinary reviews in municipal civil service register</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Escalation Trigger Action Banner */}
+            <div className="rounded-xl border border-rose-300 bg-gradient-to-r from-rose-50 via-white to-rose-50 p-4.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="p-1 rounded-md bg-rose-600 text-white">
+                    <FileWarning className="w-4 h-4" />
+                  </span>
+                  <h4 className="text-xs font-bold text-slate-900">
+                    Is the Subordinate Officer Unresponsive or Unsuccessful?
+                  </h4>
+                </div>
+                <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
+                  File a formal Non-Response & Negligence Dossier directly with the Chief Municipal Commissioner. Your complaint will include verified ProofMesh evidence, citizen distress telemetry, and days overdue.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsEscalateModalOpen(true)}
+                className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-rose-500 transition-all cursor-pointer"
+              >
+                <ShieldAlert className="w-4 h-4" />
+                <span>Escalate Inaction to Commissioner</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Historical Escalation Dossiers & Audit Trail */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-purple-600" />
+                  <span>Public Escalation Dossiers & Supervisory Enforcement Ledger</span>
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Permanent audit trail of all non-response notices filed to higher authorities and executive directives issued.
+                </p>
+              </div>
+              <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                Audited Ledger
+              </span>
+            </div>
+
+            {incident.accountability?.escalationHistory && incident.accountability.escalationHistory.length > 0 ? (
+              <div className="space-y-3.5">
+                {incident.accountability.escalationHistory.map(esc => (
+                  <div
+                    key={esc.id}
+                    className="rounded-xl border border-purple-200 bg-purple-50/30 p-4 space-y-3"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-100 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase text-purple-900 bg-purple-100 px-2 py-0.5 rounded">
+                          Grievance Token: {esc.id.toUpperCase()}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-800">
+                          Filed by: {esc.escalatedByName}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-500">
+                        {new Date(esc.escalatedAt).toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Subordinate Cited</span>
+                        <span className="font-semibold text-slate-800">{esc.fromOfficial.name} ({esc.fromOfficial.title})</span>
+                        <span className="text-[11px] text-rose-600 block font-medium">Overdue: {esc.daysUnresponsive} days inactive</span>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Higher Authority Addressed</span>
+                        <span className="font-semibold text-cyan-900">{esc.toOfficial.name} ({esc.toOfficial.title})</span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg bg-white p-3 border border-purple-100 text-xs text-slate-700 space-y-1">
+                      <span className="font-bold text-slate-900 block">Citizen Grievance Reason:</span>
+                      <p className="leading-relaxed">{esc.reason}</p>
+                    </div>
+
+                    <div className="rounded-lg bg-purple-100/60 p-3 text-xs text-purple-950 space-y-1">
+                      <div className="flex items-center gap-1 font-bold text-purple-900">
+                        <ShieldCheck className="w-3.5 h-3.5 text-purple-700" />
+                        <span>Commissioner Directive & Supervisory Action:</span>
+                      </div>
+                      <p className="leading-relaxed">{esc.supervisoryActionNotes}</p>
+                      <p className="text-[10px] text-purple-700 font-medium pt-1">
+                        Attached: {esc.evidencePacketSummary}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-500 space-y-1">
+                <CheckCircle2 className="w-6 h-6 text-slate-400 mx-auto" />
+                <p className="font-medium text-slate-700">No Prior Non-Response Escalations Filed</p>
+                <p className="text-[11px] text-slate-400">
+                  If the subordinate fails to act on this problem, click the escalate button above to notify the Chief Commissioner.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Escalation Modal Dialog */}
+      {isEscalateModalOpen && incident.accountability && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded-lg bg-rose-600 text-white">
+                  <ShieldAlert className="w-4 h-4" />
+                </span>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Escalate Subordinate Inaction to Higher Authority
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEscalateModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEscalateSubordinate} className="space-y-4 text-xs">
+              {/* Summary Cards */}
+              <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200 space-y-2">
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-slate-500">Subordinate Being Reported:</span>
+                  <span className="font-bold text-rose-700">
+                    {incident.accountability.assignedOfficer.name} ({incident.accountability.assignedOfficer.title})
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-slate-500">Escalation Routed To:</span>
+                  <span className="font-bold text-cyan-800">
+                    {incident.accountability.supervisoryAuthority.name} (Chief Commissioner)
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-slate-500">Incident Severity & Criticality:</span>
+                  <span className="font-bold text-slate-900">
+                    {incident.criticalityScore}/100 Criticality &bull; {incident.distressSentimentScore}% Distress
+                  </span>
+                </div>
+              </div>
+
+              {/* Reason Input */}
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-800 block">
+                  Explanation of Subordinate Inaction or Non-Response <span className="text-rose-600">*</span>
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="Detail specifically how the subordinate engineer failed to respond (e.g., No crew arrived within SLA, temporary repair failed immediately, unacknowledged tickets while danger persists)..."
+                  value={escalateReason}
+                  onChange={e => setEscalateReason(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 p-3 text-xs text-slate-800 focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              {/* Evidence Notes */}
+              <div className="space-y-1.5">
+                <label className="font-semibold text-slate-700 block">
+                  Additional Context or On-Site Observations (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Children crossing daily, water ponding deep, local shopkeepers protesting..."
+                  value={escalateNotes}
+                  onChange={e => setEscalateNotes(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-800 focus:border-rose-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Automated Bundle Notice */}
+              <div className="rounded-lg bg-rose-50/80 border border-rose-200/80 p-3 text-[11px] text-rose-900 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>
+                  The full ProofMesh cryptographic evidence dossier, resident timestamps, and GIS coordinates will be bundled automatically into this vigilance filing.
+                </span>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEscalateModalOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEscalation || !escalateReason.trim()}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-500 disabled:opacity-50 transition-colors cursor-pointer"
+                >
+                  {submittingEscalation ? (
+                    <span>Dispatching Notice...</span>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Dispatch to Commissioner</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

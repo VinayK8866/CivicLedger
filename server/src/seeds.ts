@@ -84,6 +84,66 @@ export function seedInitialData(): DatabaseSchema {
       urgencyRationale: 'Compound priority driven by 4x recurrence, medical clinic access obstruction, and severe resident distress sentiment (82/100).',
       tags: ['flooding', 'drainage-choke', 'critical-access', 'clinic-road'],
       reportIds: ['rep-elm-001', 'rep-elm-002', 'rep-elm-003', 'rep-elm-004'],
+      accountability: {
+        department: 'Stormwater Drains & Municipal Culvert Maintenance (SWD)',
+        assignedOfficer: {
+          id: 'cust-murthy-swd',
+          name: 'Er. K. Murthy',
+          title: 'Junior Ward Engineer (Subordinate Field Operations)',
+          department: 'Stormwater Drainage Division',
+          level: 'subordinate_field_officer',
+          contactEmail: 'k.murthy.swd@greenfieldward.gov.in',
+          contactPhone: '+91 98450 22319'
+        },
+        supervisoryAuthority: {
+          id: 'cust-sundaram-comm',
+          name: 'Dr. Nandini Sundaram, IAS',
+          title: 'Chief Municipal Commissioner & Public Safety Ombudsman',
+          department: 'Municipal Corporation Executive Directorate',
+          level: 'chief_commissioner',
+          contactEmail: 'commissioner@greenfieldward.gov.in',
+          contactPhone: '+91 94480 00100'
+        },
+        assignedAt: '2026-01-08T08:00:00Z',
+        slaHours: 48,
+        slaDeadline: '2026-01-10T08:00:00Z',
+        slaStatus: 'escalated_to_superior',
+        lastOfficerUpdate: 'Surface suction performed on Jan 12. No subterranean culvert inspection executed.',
+        inactionDays: 6,
+        escalationHistory: [
+          {
+            id: 'esc-elm-001',
+            incidentId: 'inc-elm-waterlog',
+            escalatedAt: '2026-02-03T10:00:00Z',
+            escalatedBy: 'usr-verifier-elena',
+            escalatedByName: 'Elena Rostova (Community Verifier)',
+            fromOfficial: {
+              id: 'cust-murthy-swd',
+              name: 'Er. K. Murthy',
+              title: 'Junior Ward Engineer (Subordinate Field Operations)',
+              department: 'Stormwater Drainage Division',
+              level: 'subordinate_field_officer',
+              contactEmail: 'k.murthy.swd@greenfieldward.gov.in',
+              contactPhone: '+91 98450 22319'
+            },
+            toOfficial: {
+              id: 'cust-sundaram-comm',
+              name: 'Dr. Nandini Sundaram, IAS',
+              title: 'Chief Municipal Commissioner & Public Safety Ombudsman',
+              department: 'Municipal Corporation Executive Directorate',
+              level: 'chief_commissioner',
+              contactEmail: 'commissioner@greenfieldward.gov.in',
+              contactPhone: '+91 94480 00100'
+            },
+            reason: 'Subordinate Officer Murthy performed temporary surface suction on Jan 12 without inspecting underground brick culvert collapse. Waterlogging reoccurred 4x, blocking emergency clinic entrance. Officer unresponsive to repeated community notifications.',
+            daysUnresponsive: 6,
+            slaBreachedHours: 144,
+            evidencePacketSummary: '4 verified timestamped resident photo claims, St. Jude clinic ambulance log, and missing robotic CCTV crawler inspection evidence packet attached.',
+            status: 'urgent_override_dispatched',
+            supervisoryActionNotes: 'COMMISSIONER NOTICE CMD-44: Executive override ordered. Department of Public Works directed to deploy robotic crawler camera and high-velocity suction within 48h. Disciplinary review opened on subordinate maintenance record.'
+          }
+        ]
+      },
       createdAt: '2026-01-08T07:30:00Z',
       updatedAt: '2026-02-04T17:00:00Z'
     },
@@ -111,6 +171,34 @@ export function seedInitialData(): DatabaseSchema {
       urgencyRationale: 'Routine-to-elevated priority driven by 3x recurrence with moderate commuter distress (55/100).',
       tags: ['road-hazard', 'two-wheeler-risk', 'freight-route'],
       reportIds: ['rep-oak-001', 'rep-oak-002'],
+      accountability: {
+        department: 'Roads & Infrastructure Engineering Department (PWD)',
+        assignedOfficer: {
+          id: 'cust-sharma-pwd',
+          name: 'Er. A. Sharma',
+          title: 'Road Maintenance Supervisor (Ward Roads Unit)',
+          department: 'Public Works Department',
+          level: 'subordinate_field_officer',
+          contactEmail: 'a.sharma.pwd@greenfieldward.gov.in',
+          contactPhone: '+91 98450 33412'
+        },
+        supervisoryAuthority: {
+          id: 'cust-sundaram-comm',
+          name: 'Dr. Nandini Sundaram, IAS',
+          title: 'Chief Municipal Commissioner & Public Safety Ombudsman',
+          department: 'Municipal Corporation Executive Directorate',
+          level: 'chief_commissioner',
+          contactEmail: 'commissioner@greenfieldward.gov.in',
+          contactPhone: '+91 94480 00100'
+        },
+        assignedAt: '2025-12-14T10:00:00Z',
+        slaHours: 72,
+        slaDeadline: '2025-12-17T10:00:00Z',
+        slaStatus: 'within_sla',
+        lastOfficerUpdate: 'Cold-mix asphalt patch scheduled for milling and hot-mix resurfacing.',
+        inactionDays: 1,
+        escalationHistory: []
+      },
       createdAt: '2025-12-14T09:30:00Z',
       updatedAt: '2026-01-28T14:00:00Z'
     },
@@ -138,6 +226,34 @@ export function seedInitialData(): DatabaseSchema {
       urgencyRationale: 'Urgent priority driven by 5x chronic recurrence and sanitary drain obstruction.',
       tags: ['sanitation', 'storm-grate-blockage', 'commercial-waste'],
       reportIds: ['rep-mkt-001', 'rep-mkt-002'],
+      accountability: {
+        department: 'Solid Waste Management & Public Health Division',
+        assignedOfficer: {
+          id: 'cust-naik-swm',
+          name: 'Inspector Sunil Naik',
+          title: 'Health & Sanitary Inspector (Zone 2)',
+          department: 'Public Health & Sanitation',
+          level: 'subordinate_field_officer',
+          contactEmail: 's.naik.health@greenfieldward.gov.in',
+          contactPhone: '+91 98450 44521'
+        },
+        supervisoryAuthority: {
+          id: 'cust-sundaram-comm',
+          name: 'Dr. Nandini Sundaram, IAS',
+          title: 'Chief Municipal Commissioner & Public Safety Ombudsman',
+          department: 'Municipal Corporation Executive Directorate',
+          level: 'chief_commissioner',
+          contactEmail: 'commissioner@greenfieldward.gov.in',
+          contactPhone: '+91 94480 00100'
+        },
+        assignedAt: '2026-01-03T09:00:00Z',
+        slaHours: 24,
+        slaDeadline: '2026-01-04T09:00:00Z',
+        slaStatus: 'within_sla',
+        lastOfficerUpdate: 'Commercial dump warning notices posted at Wholesale Produce Dock Gate 3.',
+        inactionDays: 0,
+        escalationHistory: []
+      },
       createdAt: '2026-01-02T18:30:00Z',
       updatedAt: '2026-02-05T09:00:00Z'
     },
@@ -165,6 +281,34 @@ export function seedInitialData(): DatabaseSchema {
       urgencyRationale: 'Critical emergency life-safety hazard: high-voltage arcing over school crosswalk with extreme resident distress/panic sentiment (96/100) escalates this isolated incident to top priority ahead of recurring potholes.',
       tags: ['live-wire', 'electrocution-hazard', 'school-safety', 'critical-emergency'],
       reportIds: ['rep-cable-001'],
+      accountability: {
+        department: 'Greenfield Metropolitan Electricity Distribution Utility (GMEDU)',
+        assignedOfficer: {
+          id: 'cust-verma-power',
+          name: 'Er. Rajesh Verma',
+          title: 'Subordinate Field Electrical Engineer (Division 4)',
+          department: 'Grid Operations & Feeder Maintenance',
+          level: 'subordinate_field_officer',
+          contactEmail: 'r.verma.grid@greenfieldpower.gov.in',
+          contactPhone: '+91 98450 77112'
+        },
+        supervisoryAuthority: {
+          id: 'cust-sundaram-comm',
+          name: 'Dr. Nandini Sundaram, IAS',
+          title: 'Chief Municipal Commissioner & Public Safety Ombudsman',
+          department: 'Municipal Corporation Executive Directorate',
+          level: 'chief_commissioner',
+          contactEmail: 'commissioner@greenfieldward.gov.in',
+          contactPhone: '+91 94480 00100'
+        },
+        assignedAt: '2026-02-06T14:15:00Z',
+        slaHours: 4, // 4-hour emergency SLA
+        slaDeadline: '2026-02-06T18:15:00Z',
+        slaStatus: 'sla_breached', // SLA breached: subordinate failed to acknowledge or dispatch emergency isolation crew!
+        lastOfficerUpdate: 'Ticket dispatched automatically. Zero field verification or crew acknowledgment recorded.',
+        inactionDays: 2,
+        escalationHistory: []
+      },
       createdAt: '2026-02-06T14:15:00Z',
       updatedAt: '2026-02-06T14:15:00Z'
     }

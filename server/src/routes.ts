@@ -351,6 +351,100 @@ router.get('/incidents/:id/timeline', (req: Request, res: Response) => {
   res.json({ timeline: observations });
 });
 
+/**
+ * Escalate subordinate non-response / negligence to higher supervisory authority
+ */
+router.post('/incidents/:id/escalate', async (req: Request, res: Response) => {
+  const incident = db.incidents.find(i => i.id === req.params.id);
+  if (!incident) return res.status(404).json({ error: 'Incident not found' });
+
+  const { reason, evidenceNotes } = req.body;
+  if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
+    return res.status(400).json({ error: 'A specific explanation of subordinate non-response or inaction is required (min 5 chars).' });
+  }
+
+  // Ensure accountability structure exists
+  if (!incident.accountability) {
+    incident.accountability = {
+      department: 'Municipal Public Works & Civic Safety Directorate',
+      assignedOfficer: {
+        id: 'cust-field-default',
+        name: 'Er. Field Officer',
+        title: 'Junior Ward Operations Engineer',
+        department: 'Field Operations',
+        level: 'subordinate_field_officer',
+        contactEmail: 'field.ops@greenfieldward.gov.in',
+        contactPhone: '+91 98450 00000'
+      },
+      supervisoryAuthority: {
+        id: 'cust-commissioner',
+        name: 'Dr. Nandini Sundaram, IAS',
+        title: 'Chief Municipal Commissioner & Public Safety Ombudsman',
+        department: 'Municipal Corporation Executive Directorate',
+        level: 'chief_commissioner',
+        contactEmail: 'commissioner@greenfieldward.gov.in',
+        contactPhone: '+91 94480 00100'
+      },
+      assignedAt: incident.createdAt,
+      slaHours: 24,
+      slaDeadline: new Date(Date.now() - 3600000).toISOString(),
+      slaStatus: 'sla_breached',
+      inactionDays: 2,
+      escalationHistory: []
+    };
+  }
+
+  const escId = `esc-${Date.now().toString(36)}`;
+  const daysUnresponsive = Math.max(1, incident.accountability.inactionDays || 2);
+  const breachedHours = incident.accountability.slaHours ? incident.accountability.slaHours * 2 : 48;
+
+  const escalationRecord = {
+    id: escId,
+    incidentId: incident.id,
+    escalatedAt: new Date().toISOString(),
+    escalatedBy: currentDemoUser.id,
+    escalatedByName: `${currentDemoUser.displayName} (${currentDemoUser.role.toUpperCase()})`,
+    fromOfficial: incident.accountability.assignedOfficer,
+    toOfficial: incident.accountability.supervisoryAuthority,
+    reason: reason.trim(),
+    daysUnresponsive,
+    slaBreachedHours: breachedHours,
+    evidencePacketSummary: `ProofMesh Verified Evidence Packet Attached: ${incident.reportIds.length} corroborating resident reports, Criticality Score ${incident.criticalityScore ?? 50}/100 (${incident.priorityRank}), Citizen Distress Sentiment ${incident.distressSentimentScore ?? 45}%. ${evidenceNotes ? `Additional notes: ${evidenceNotes}` : ''}`,
+    status: 'pending_commissioner_review' as const,
+    supervisoryActionNotes: `FORMAL VIGILANCE TICKET ${escId.toUpperCase()} DISPATCHED: Routed to Commissioner's Executive Desk. Subordinate ${incident.accountability.assignedOfficer.name} flagged for non-response audit. Priority review mandated within 24h.`
+  };
+
+  incident.accountability.slaStatus = 'escalated_to_superior';
+  incident.accountability.escalationHistory.unshift(escalationRecord);
+  incident.updatedAt = new Date().toISOString();
+
+  // Audit event in civic ledger
+  db.addAudit(
+    currentDemoUser.id,
+    currentDemoUser.displayName,
+    currentDemoUser.role,
+    'SUBORDINATE_INACTION_ESCALATED',
+    'CanonicalIncident',
+    incident.id,
+    {
+      escalationId: escId,
+      fromOfficial: incident.accountability.assignedOfficer.name,
+      toOfficial: incident.accountability.supervisoryAuthority.name,
+      reason: reason.trim(),
+      daysUnresponsive
+    }
+  );
+
+  await db.persist();
+
+  res.status(201).json({
+    success: true,
+    message: `Subordinate non-response successfully escalated to Higher Authority (${incident.accountability.supervisoryAuthority.name}).`,
+    escalation: escalationRecord,
+    incident
+  });
+});
+
 // -------------------------------------------------------------
 // ProofMesh Evidence Graph & Relations
 // -------------------------------------------------------------
