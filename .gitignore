@@ -37,3 +37,5 @@ Thumbs.db
 
 # Persistent runtime data (re-seeded on start if missing)
 server/data/civictwin_db.json
+
+.vercel

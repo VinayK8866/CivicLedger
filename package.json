@@ -2,6 +2,7 @@
   "name": "civictwin-proofmesh",
   "version": "1.0.0",
   "description": "CivicTwin + ProofMesh: AI-Powered Community Intelligence Platform with Neighborhood Digital Memory and Evidence Graph",
+  "type": "module",
   "private": true,
   "workspaces": [
     "client",

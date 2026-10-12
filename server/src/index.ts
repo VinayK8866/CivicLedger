@@ -29,6 +29,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // API Routes
 app.use('/api', router);
+app.use(router);
 
 // Error handler
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

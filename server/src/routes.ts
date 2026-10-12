@@ -29,6 +29,19 @@ let currentDemoUser = {
 };
 
 // -------------------------------------------------------------
+// System Health Check
+// -------------------------------------------------------------
+router.get('/health', (req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    service: 'CivicTwin + ProofMesh Intelligence Engine',
+    timestamp: new Date().toISOString(),
+    incidentsCount: db.incidents.length,
+    claimsCount: db.claims.length
+  });
+});
+
+// -------------------------------------------------------------
 // Auth & Demo Session
 // -------------------------------------------------------------
 router.get('/auth/me', (req: Request, res: Response) => {
